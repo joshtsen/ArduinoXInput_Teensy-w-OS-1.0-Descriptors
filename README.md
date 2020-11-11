@@ -1,39 +1,33 @@
-# Teensy XInput USB Mode [![Build Status](https://travis-ci.org/dmadison/ArduinoXInput_Teensy.svg?branch=master)](https://travis-ci.org/dmadison/ArduinoXInput_Teensy)
+# Teensy XInput + Composite Devices
 
-The files in this repository will add an additional USB mode ("XInput") to your Teensy 3 board, allowing it to emulate an Xbox gamepad.
+This is an extension of Dave Madison's [ArduinoXInput library](https://github.com/dmadison/ArduinoXInput) which supports the [Microsoft OS 1.0 Descriptors](https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-os-1-0-descriptors-specification). This specification defines three new descriptors: the Extended Compat ID OS Descriptor, Extended Properties OS Descriptor and the Genre Descriptor (not used here).
 
-This is meant to be used in conjunction with the [ArduinoXInput library](https://github.com/dmadison/ArduinoXInput).
+The Extended Compat ID OS Descriptor allows defining a specific compatibleID for each interface or function group of a device. When there is no VID:PID driver match, the compatibleID is used to find a potential match. In the context of XInput, this allows assignment of the XUSB driver without the need for hijacking the VID:PID of an official Microsoft controller. It also allows assignment of the XUSB driver to a specific interface or group of interfaces. Thus, XInput + Keyboard, XInput + Serial, or XInput + DirectInput composite devices are possible.
+
+There are also compatibleIDs to match WINUSB, LIBUSB0, LIBUSBK and more. Additionally, the Extended Properties descriptor can be used to define properties of various types including REG_SZ, REG_LINK, and REG_MULTI_SZ. These can reflect any device specific property such as a DeviceInterfaceGUID or an icon. The Extended Properties Descriptor is implemented here but not used.
+
+See these links to find out more about the driver selection process:
+
+ * [Enumeration of USB Devices](https://techcommunity.microsoft.com/t5/microsoft-usb-blog/how-does-usb-stack-enumerate-a-device/ba-p/270685)
+ * [Enumeration of Composite Devices](https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/enumeration-of-the-composite-parent-device)
+ 
+Simpler explanation of Windows Compatible ID (WCID):
+
+ * [https://github.com/pbatard/libwdi/wiki/WCID-Devices](https://github.com/pbatard/libwdi/wiki/WCID-Devices)
  
 ## Installation
 
-You must have both [Arduino](https://www.arduino.cc/en/main/software) and [Teensyduino](https://www.pjrc.com/teensy/td_download.html) installed before proceeding. Double-check that your installed Teensyduino version matches the files provided in this repository. This repository is currently using version [**1.53**](https://www.pjrc.com/teensy/td_153). If you don't know your Teensyduino version, compile a blank sketch with a Teensy board selected and the Teensy Loader will open. In the Teensy Loader window select `Help -> About` and it will tell you the version number. If your version does not match you will have to reinstall or update the Teensyduino software.
+See [original repository](https://github.com/dmadison/ArduinoXInput) and then replace the necessary files.
 
-Navigate to your Arduino installation directory and open up the 'hardware' folder. It is recommended that you make a backup of this folder before proceeding in case something goes wrong or if you want to revert the installation.
+## Customization
 
-To install, copy the files from the repository's "teensy" directory into the hardware folder and replace any pre-existing files. This will not affect your saved sketches.
+#### Creating Your Own Composite Device
 
-To uninstall, restore your 'teensy' folder from a backup or reinstall Teensyduino.
+TODO
 
-## Supported Boards
+#### Adjusting the CompatID Descriptor
 
-* [Teensy 3.6](https://www.pjrc.com/store/teensy36.html)
-* [Teensy 3.5](https://www.pjrc.com/store/teensy35.html)
-* [Teensy 3.1](https://www.pjrc.com/store/teensy31.html) / [3.2](https://www.pjrc.com/store/teensy32.html)
-* [Teensy LC](https://www.pjrc.com/teensy/teensyLC.html)
-
-## Limitations
-
-### No Console Support
-
-This will *not* enable you to use your Teensy with an Xbox console! Genuine controllers use a dedicated hardware security chip that handshakes with the console. The Teensy boards do not have this chip, and its security method has not been (openly) broken.
-
-### No Commercial Use
-
-These board definitions make use of Microsoft's VID and PID in order to latch on to the PC driver. As such this is strictly for educational or development use by non-commercial entities.
-
-## Credits and Contributions
-
-A massive thank you to Zach Littell, whose did all of the original legwork in putting this together. Check out some of his stuff at [zlittell.com](http://www.zlittell.com).
+TODO
 
 ## License
 
