@@ -33,11 +33,11 @@
 
 #include "usb_desc.h"
 
-#if (defined(CDC_STATUS_INTERFACE) && defined(CDC_DATA_INTERFACE)) || defined(USB_DISABLED) || defined(USB_XINPUT)
+#if (defined(CDC_STATUS_INTERFACE) && defined(CDC_DATA_INTERFACE)) || defined(USB_DISABLED) || defined(USB_XINPUT) || defined(USB_XINPUT_KEYBOARD_MOUSE)
 
 #include <inttypes.h>
 
-#if F_CPU >= 20000000 && !(defined(USB_DISABLED) || defined(USB_XINPUT))
+#if F_CPU >= 20000000 && !(defined(USB_DISABLED) || defined(USB_XINPUT) || defined(USB_XINPUT_KEYBOARD_MOUSE))
 
 #include "core_pins.h" // for millis()
 

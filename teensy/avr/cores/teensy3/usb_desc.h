@@ -947,35 +947,136 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   #define ENDPOINT14_CONFIG	ENDPOINT_TRANSMIT_ISOCHRONOUS
   #define ENDPOINT15_CONFIG	ENDPOINT_TRANSMIT_ONLY
 
+// ************************
+// Notes
+/* ************************
+
+1. XINPUT_INTERFACE must always be the first interface (interface 0)
+
+2. The other 3 interfaces originally defined by Arduino_XInput are not needed. Only the 
+    first "control" interface
+
+3. VENDOR_ID/PRODUCT_ID should not match any existing driver so that the device
+    is assigned the generic parent driver
+
+4. NUM_COMPAT_IDS should be the same as NUM_INTERFACE unless interfaces are grouped
+    using an Interface Association Descriptor (IAD). In which case there should be
+    one compatibleID entry for each IAD and each interface not in an IAD. More details
+    can be found in the OS 1.0 Descriptor Specifications
+
+5. CONFIG_DESC_SIZE is no longer manually calculated for XInput devices
+
+6. BCD_USB (usb version spec) is set to 0x0200. This is required in order to use OS Feature
+    Descriptors. It may cause additional descriptor requests such as the Device Qualifier Descriptor
+    but these can be ignored.
+
+7. VENDOR_CODE is used as the .bRequest value in the OS Feature Descriptor request. It matches
+    the .bMS_VendorCode supplied in usb_os_string_descriptor. It can be any value so long as it does
+    not match any of the standard .bRequest values.
+
+8. If using IADs, the DEVICE_CLASS/SUBCLASS/PROTOCOL should be 0xEF, 0x02 and 0x01 respectively.
+    You will also need to either modify the size definitions in usb_desc.c to include the IAD
+    or manually #define CONFIG_DESC_SIZE
+
+9. OS_DESC_VERSION is used to enable OS descriptor features but also defines the version in case
+    support for OS 2.0 Descriptors is added.
+
+
+The steps to add a new composite device are mostly the same as before in regards to this file.
+
+1. create a new #elif branch according to the value used in boards.txt
+
+2. Add the appropriate definitions matching the patterns of existing devices
+
+3. Ensure that the XINPUT_INTERFACE is first (0) and uses endpoints 1 and 2
+
+4. Ensure that NUM_COMPAT_IDS matches the number of interfaces or independent interfaces + IADs
+
+5. Ensure that VENDOR_ID and PRODUCT_ID do NOT match a driver (i.e. 0x045e:0x028e used by XBox 360 controllers)
+
+
+
+When debugging it may be useful to incrementally change BCD_DEVICE (firmware version) or the PRODUCT_ID. Windows
+only queries the OS Descriptors the first time a device is plugged in. You can alternately uinstall the device
+in Device Manager (USBDeview is easier since you can list by VID/PID) and delete the registry values found in
+
+Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\VID+PID+BCDVERSION
+
+*/
+
 #elif defined(USB_XINPUT)
-  #define DEVICE_CLASS	0xFF
-  #define DEVICE_SUBCLASS	0xFF
-  #define DEVICE_PROTOCOL	0xFF
-  #define BCD_DEVICE	0x0114
+  #define BCD_USB 0x0200
+  #define OS_DESC_VERSION 0x0100
+  #define DEVICE_CLASS	0x00
+  #define DEVICE_SUBCLASS	0x00
+  #define DEVICE_PROTOCOL	0x00
   #define DEVICE_ATTRIBUTES 0xA0
-  #define DEVICE_POWER	0xFA
-  #define VENDOR_ID		0x045e
-  #define PRODUCT_ID		0x028e
-  #define MANUFACTURER_NAME	{0x00A9,'M','i','c','r','o','s','o','f','t'}
-  #define MANUFACTURER_NAME_LEN	10
-  #define PRODUCT_NAME		{'C','o','n','t','r','o','l','l','e','r'}
-  #define PRODUCT_NAME_LEN	10
-  #define EP0_SIZE	8
-  #define NUM_ENDPOINTS	6
-  #define NUM_USB_BUFFERS	24
-  #define NUM_INTERFACE	4
-  #define XINPUT_INTERFACE	0
-  #define XINPUT_RX_ENDPOINT	2
-  #define XINPUT_RX_SIZE 8
-  #define XINPUT_TX_ENDPOINT	1
-  #define XINPUT_TX_SIZE 20
-  #define CONFIG_DESC_SIZE 153
+  #define VENDOR_ID
+  #define PRODUCT_ID
+  #define VENDOR_CODE           0xA5
+  #define MANUFACTURER_NAME	{'T','e','e','n','s','y','d','u','i','n','o'}
+  #define MANUFACTURER_NAME_LEN	11
+  #define PRODUCT_NAME		{'X','I','n','p','u','t',' ','C','o','n','t','r','o','l','l','e','r'}
+  #define PRODUCT_NAME_LEN	    17
+  #define EP0_SIZE	            8
+  #define NUM_ENDPOINTS	        2
+  #define NUM_USB_BUFFERS	      24
+  #define NUM_INTERFACE	        1
+  #define NUM_COMPAT_IDS        1
+  #define XINPUT_INTERFACE	    0
+  #define XINPUT_RX_ENDPOINT	  2
+  #define XINPUT_RX_SIZE        8
+  #define XINPUT_TX_ENDPOINT	  1
+  #define XINPUT_TX_SIZE        20
+  #define ENDPOINT1_CONFIG ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT2_CONFIG ENDPOINT_RECEIVE_ONLY
+#endif // USB_XINPUT
+
+#elif defined(USB_XINPUT_KEYBOARD_MOUSE)
+  #define BCD_USB 0x0200
+  #define OS_DESC_VERSION 0x0100
+  #define DEVICE_CLASS 0x00
+  #define DEVICE_SUBCLASS 0x00
+  #define DEVICE_PROTOCOL 0x00
+  #define DEVICE_ATTRIBUTES 0xA0
+  #define VENDOR_ID
+  #define PRODUCT_ID
+  #define VENDOR_CODE           0xA5
+  #define MANUFACTURER_NAME {'T','e','e','n','s','y','d','u','i','n','o'}
+  #define MANUFACTURER_NAME_LEN 11
+  #define PRODUCT_NAME {'X', 'I', 'n', 'p', 'u', 't', '+', 'K', 'B', 'M'}
+  #define PRODUCT_NAME_LEN 10
+  #define EP0_SIZE              64
+  #define NUM_ENDPOINTS         4
+  #define NUM_USB_BUFFERS       24
+  #define NUM_INTERFACE         3
+  #define NUM_COMPAT_IDS        3
+  #define XINPUT_INTERFACE      0
+  #define XINPUT_RX_ENDPOINT    2
+  #define XINPUT_RX_SIZE        8
+  #define XINPUT_TX_ENDPOINT    1
+  #define XINPUT_TX_SIZE        20
+  #define KEYBOARD_INTERFACE    1 // Keyboard
+  #define KEYBOARD_ENDPOINT     3
+  #define KEYBOARD_SIZE         8
+  #define KEYBOARD_INTERVAL     1
+  #define MOUSE_INTERFACE       2 // Mouse
+  #define MOUSE_ENDPOINT        4
+  #define MOUSE_SIZE            8
+  #define MOUSE_INTERVAL        1
   #define ENDPOINT1_CONFIG ENDPOINT_TRANSMIT_ONLY
   #define ENDPOINT2_CONFIG ENDPOINT_RECEIVE_ONLY
   #define ENDPOINT3_CONFIG ENDPOINT_TRANSMIT_ONLY
-  #define ENDPOINT4_CONFIG ENDPOINT_RECEIVE_ONLY
-  #define ENDPOINT5_CONFIG ENDPOINT_TRANSMIT_AND_RECEIVE
-  #define ENDPOINT6_CONFIG ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT4_CONFIG ENDPOINT_TRANSMIT_ONLY
+#endif // USB_XINPUT_KEYBOARD_MOUSE
+
+#elif defined(USB_XINPUT_SERIAL)
+
+#endif // USB_XINPUT_SERIAL
+
+#elif defined(USB_XINPUT_DIRECTINPUT)
+
+#endif // USB_XINPUT_DIRECTINPUT
   
 
 #endif

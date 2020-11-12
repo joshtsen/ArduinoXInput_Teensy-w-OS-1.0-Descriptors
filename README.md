@@ -29,6 +29,16 @@ TODO
 
 TODO
 
+### Common Issues and Debugging tips
+
+In some cases, when making composite HID+XInput devices, after programming/rebooting the device the port may stop responding to hid input. I think this is related to the fact that Teensy uses HID serial to program and the hid driver ends up misconfigured/hung in some way. Simply unplugging and re-plugging the device will not fix this. You will need to either restart the root USB hub or restart your computer.
+
+If you are unsure if the OS Feature Descriptors are being read, you can check the registry value in
+
+Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\XXXXXXXXXXXX\osvc
+
+where XXX... is your VID+PID+BCD_VERSION (firmware version). If the os string descriptor is read and the signature matches ("MSFT100") then osvc will be set to 0x01XX where XX is the vendor code provided in the os string descriptor and defined in "usb_desc.h".
+
 ## License
 
 The original Teensy core files and their modified versions are licensed under a modified version of the permissive [MIT license](https://opensource.org/licenses/MIT). Newly contributed files are licensed under the MIT license with no additional stipulations.

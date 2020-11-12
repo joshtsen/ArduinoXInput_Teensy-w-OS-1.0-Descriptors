@@ -88,6 +88,12 @@ usb_serial_class Serial;
 usb_serial_class Serial;
 #endif
 
+#ifdef USB_XINPUT_KEYBOARD_MOUSE
+usb_serial_class Serial;
+#endif
+
+// TODO: other usb types for XInput
+
 
 #else // F_CPU < 20 MHz
 

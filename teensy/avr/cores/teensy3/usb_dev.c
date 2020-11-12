@@ -497,6 +497,32 @@ static void usb_setup(void)
 		}
 		break;
 #endif
+#if defined(OS_DESC_VERSION) && (OS_DESC_VERSION == 0x0100)
+	  case OS_DESC_REQANDTYPE: // 0xA5C0
+	  	if (setup.wIndex == 0x0004) { // compatible id
+	  		data = (const uint8_t *)&usb_extended_compat_id_descriptor;
+	  		datalen = setup.wLength;
+	  		if (setup.wLength > usb_extended_compat_id_descriptor.dwLength) {
+	  			datalen = usb_extended_compat_id_descriptor.dwLength;
+	  		}
+	  		break;
+	  	}
+	  	if (setup.wIndex == 0x0005) { // extended properties
+	  		// extended properties descriptor has requesttype C0 according to spec
+	  		// but since there can be up to one per interface they may have request type C1 (recipient=interface)
+	  		// the associated interface number is the hi byte of setup.wValue ((setup.wValue >> 8) & 0xFF)
+	  		// for now do nothing
+	  		endpoint0_stall();
+	  		return;
+	  	}
+	  	endpoint0_stall();
+	  	return;
+
+	  case OS_DESC_REQANDTYPE_IF: // 0xA5C1
+	  	// should answer the same as above only for wIndex == 0x0005
+	  	endpoint0_stall();
+	  	return;
+#endif
 	  default:
 		endpoint0_stall();
 		return;

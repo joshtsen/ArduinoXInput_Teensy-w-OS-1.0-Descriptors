@@ -33,6 +33,9 @@
 #define USB_DESC_LIST_DEFINE
 #include "usb_desc.h"
 #ifdef NUM_ENDPOINTS
+#ifdef OS_DESC_VERSION
+#include "usb_os_desc.h" // XInput
+#endif
 #include "usb_names.h"
 #include "kinetis.h"
 #include "avr_functions.h"
@@ -68,7 +71,11 @@
 static uint8_t device_descriptor[] = {
         18,                                     // bLength
         1,                                      // bDescriptorType
-        0x10, 0x01,                             // bcdUSB
+#ifdef BCD_USB
+        LSB(BCD_USB), MSB(BCD_USB),             
+#else
+        0x10, 0x01,                             // bcdUSB, must be 0x0200 for XInput
+#endif
 #ifdef DEVICE_CLASS
         DEVICE_CLASS,                           // bDeviceClass
 #else
@@ -475,7 +482,14 @@ static uint8_t flightsim_report_desc[] = {
 //
 #define CONFIG_HEADER_DESCRIPTOR_SIZE	9
 
-#define CDC_IAD_DESCRIPTOR_POS		CONFIG_HEADER_DESCRIPTOR_SIZE
+#define XINPUT_INTERFACE_DESC_POS   CONFIG_HEADER_DESCRIPTOR_SIZE
+#ifdef XINPUT_INTERFACE
+#define XINPUT_INTERFACE_DESC_SIZE      9+17+7+7 // 40 0x28
+#else
+#define XINPUT_INTERFACE_DESC_SIZE      0
+#endif     
+
+#define CDC_IAD_DESCRIPTOR_POS		XINPUT_INTERFACE_DESC_POS+XINPUT_INTERFACE_DESC_SIZE
 #ifdef  CDC_IAD_DESCRIPTOR
 #define CDC_IAD_DESCRIPTOR_SIZE		8
 #else
@@ -591,7 +605,6 @@ static uint8_t flightsim_report_desc[] = {
 #define MULTITOUCH_INTERFACE_DESC_SIZE	0
 #endif
 
-// XInput defines its own descriptor size
 #ifndef CONFIG_DESC_SIZE
 #define CONFIG_DESC_SIZE		MULTITOUCH_INTERFACE_DESC_POS+MULTITOUCH_INTERFACE_DESC_SIZE
 #endif
@@ -619,10 +632,44 @@ static uint8_t config_descriptor[CONFIG_DESC_SIZE] = {
         0xC0,                                   // bmAttributes
 #endif
 #ifdef DEVICE_POWER
-        DEVICE_POWER,                           // bMaxPower (XInput)
+        DEVICE_POWER,                           // bMaxPower (XInput old)
 #else
         50,                                     // bMaxPower
 #endif
+
+// XInput must always be Interface 0 so it makes sense for it to also be the first descriptor
+// Size of the XInput interface descriptor is 9+17+7+7=40 or 0x28
+#ifdef XINPUT_INTERFACE
+        // Interface 0
+        9,                                      // bLength (length of interface descriptor 9 bytes)
+        4,                                      // bDescriptorType (4 is interface)
+        0,                                      // bInterfaceNumber (This is interface 0)
+        0,                                      // bAlternateSetting (used to select alternate setting.  notused)
+        2,                                      // bNumEndpoints (this interface has 2 endpoints)
+        0xFF,                                   // bInterfaceClass (Vendor Defined is 255)
+        0x5D,                                   // bInterfaceSubClass
+        0x01,                                   // bInterfaceProtocol
+        0,                                      // iInterface (Index of string descriptor for describing this notused)
+        // Some sort of common descriptor? I pulled this from Message Analyzer dumps of an actual controller
+        17,33,0,1,1,37,129,20,0,0,0,0,19,2,8,0,0,
+        // Endpoint 1 IN
+        7,                                      // bLength (length of ep1in in descriptor 7 bytes)
+        5,                                      // bDescriptorType (5 is endpoint)
+        XINPUT_TX_ENDPOINT | 0x80,              // bEndpointAddress (0x81 is IN1)
+        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
+        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
+        1,                                      // bInterval, (was originally 4. 1 is equivalent to 1000hz polling rate
+                                                // in Full Speed mode. bInterval is measured in frames so should be changed
+                                                // via alternate configuration if using High Speed capable device)
+        // Endpoint 2 OUT
+        7,                                      // bLength (length of ep2out in descriptor 7 bytes)
+        5,                                      // bDescriptorType (5 is endpoint)
+        XINPUT_RX_ENDPOINT,                     // bEndpointAddress (0x02 is OUT2)
+        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
+        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
+        8,                                      // bInterval (not changed since this is the RX endpoint)
+        // Other interfaces originally defined in ArduinoXInput_Teensy are not necessary
+#endif // XINPUT_INTERFACE
 
 #ifdef CDC_IAD_DESCRIPTOR
         // interface association descriptor, USB ECN, Table 9-Z
@@ -1581,111 +1628,121 @@ static uint8_t config_descriptor[CONFIG_DESC_SIZE] = {
         MULTITOUCH_SIZE, 0,                     // wMaxPacketSize
         1,                                      // bInterval
 #endif // KEYMEDIA_INTERFACE
-
-#ifdef XINPUT_INTERFACE
-        // Interface 0
-        9,                                      // bLength (length of interface descriptor 9 bytes)
-        4,                                      // bDescriptorType (4 is interface)
-        0,                                      // bInterfaceNumber (This is interface 0)
-        0,                                      // bAlternateSetting (used to select alternate setting.  notused)
-        2,                                      // bNumEndpoints (this interface has 2 endpoints)
-        0xFF,                                   // bInterfaceClass (Vendor Defined is 255)
-        0x5D,                                   // bInterfaceSubClass
-        0x01,                                   // bInterfaceProtocol
-        0,                                      // iInterface (Index of string descriptor for describing this notused)
-        // Some sort of common descriptor? I pulled this from Message Analyzer dumps of an actual controller
-        17,33,0,1,1,37,129,20,0,0,0,0,19,2,8,0,0,
-        // Endpoint 1 IN
-        7,                                      // bLength (length of ep1in in descriptor 7 bytes)
-        5,	                                    // bDescriptorType (5 is endpoint)
-        0x81,                                   // bEndpointAddress (0x81 is IN1)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        4,                                      // bInterval (polling interval in frames 4 frames)
-        // Endpoint 2 OUT
-        7,                                      // bLength (length of ep2out in descriptor 7 bytes)
-        5,                                      // bDescriptorType (5 is endpoint)
-        0x02,                                   // bEndpointAddress (0x02 is OUT2)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        8,                                      // bInterval (polling interval in frames 8 frames)
-        // Interface 1
-        9,                                      // bLength (length of interface descriptor 9 bytes)
-        4,                                      // bDescriptorType (4 is interface)
-        1,                                      // bInterfaceNumber (This is interface 1)
-        0,                                      // bAlternateSetting (used to select alternate setting.  notused)
-        4,                                      // bNumEndpoints (this interface has 4 endpoints)
-        0xFF,                                   // bInterfaceClass (Vendor Defined is 255)
-        0x5D,                                   // bInterfaceSubClass (93)
-        0x03,                                   // bInterfaceProtocol (3)
-        0,                                      // iInterface (Index of string descriptor for describing this notused)
-        // A different common descriptor? I pulled this from Message Analyzer dumps of an actual controller
-        27,33,0,1,1,1,131,64,1,4,32,22,133,0,0,0,0,0,0,22,5,0,0,0,0,0,0,
-        // Endpoint 3 IN
-        7,                                      // bLength (length of ep3in descriptor 7 bytes)
-        5,                                      // bDescriptorType (5 is endpoint)
-        0x83,                                   // bEndpointAddress (0x83 is IN3)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        2,                                      // bInterval (polling interval in frames 2 frames)
-        // Endpoint 4 OUT
-        7,                                      // bLength (length of ep4out descriptor 7 bytes)
-        5,                                      // bDescriptorType (5 is endpoint)
-        0x04,                                   // bEndpointAddress (0x04 is OUT4)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        4,                                      // bInterval (polling interval in frames 4 frames)
-        // Endpoint 5 IN
-        7,                                      // bLength (length of ep5in descriptor 7 bytes)
-        5,                                      // bDescriptorType (5 is endpoint)
-        0x85,                                   // bEndpointAddress (0x85 is IN5)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        64,                                     // bInterval (polling interval in frames 64 frames)
-        // Endpoint 5 OUT (shares endpoint number with previous)
-        7,                                      // bLength (length of ep5out descriptor 7 bytes)
-        5,                                      // bDescriptorType (5 is endpoint)
-        0x05,                                   // bEndpointAddress (0x05 is OUT5)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        16,                                     // bInterval (polling interval in frames 16 frames)
-        // Interface 2
-        9,                                      // bLength (length of interface descriptor 9 bytes)
-        4,                                      // bDescriptorType (4 is interface)
-        2,                                      // bInterfaceNumber (This is interface 2)
-        0,                                      // bAlternateSetting (used to select alternate setting.  notused)
-        1,                                      // bNumEndpoints (this interface has 4 endpoints)
-        0xFF,                                   // bInterfaceClass (Vendor Defined is 255)
-        0x5D,                                   // bInterfaceSubClass (93)
-        0x02,                                   // bInterfaceProtocol (3)
-        0,                                      // iInterface (Index of string descriptor for describing this notused)
-        // Common Descriptor.  Seems that these come after every interface description?
-        9,33,0,1,1,34,134,7,0,
-        // Endpoint 6 IN
-        7,                                      // bLength (length of ep6in descriptor 7 bytes)
-        5,                                      // bDescriptorType (5 is endpoint)
-        0x86,                                   // bEndpointAddress (0x86 is IN6)
-        0x03,                                   // bmAttributes (0x03 is interrupt no synch, usage type data)
-        0x20, 0x00,                             // wMaxPacketSize (0x0020 is 1x32 bytes)
-        16,                                     // bInterval (polling interval in frames 64 frames)+
-        // Interface 3
-        // This is the interface on which all the security handshaking takes place
-        // We don't use this but it could be used for man-in-the-middle stuff
-        9,                                      // bLength (length of interface descriptor 9 bytes)
-        4,                                      // bDescriptorType (4 is interface)
-        3,                                      // bInterfaceNumber (This is interface 3)
-        0,                                      // bAlternateSetting (used to select alternate setting.  notused)
-        0,                                      // bNumEndpoints (this interface has 0 endpoints ???)
-        0xFF,                                   // bInterfaceClass (Vendor Defined is 255)
-        0xFD,                                   // bInterfaceSubClass (253)
-        0x13,                                   // bInterfaceProtocol (19)
-        4,                                      // iInterface (Computer never asks for this, but an x360 would. so include one day?)
-        // Another interface another Common Descriptor
-        6,65,0,1,1,3
-#endif // XINPUT_INTERFACE
-
 };
 
+// **************************************************************
+//   OS Feature Descriptors
+// **************************************************************
+
+#ifdef OS_DESC_VERSION 
+// not necessary since on usb versions <2.0 none of the descriptors
+// will be queried. But avoids theoretically possible collisions
+
+// These descriptors are only queried the first time a device connects to the computer
+// When debugging or modifying you will need to uninstall the device and delete the osvc
+// registry key.
+
+#define OS_DESC_REQANDTYPE OS_DESC_VERSION | 0xC0 // 0xA5C0
+#define OS_DESC_REQANDTYPE_IF OS_DESC_VERSION | 0xC1 // 0xA5C1
+
+/*
+When correctly read by the computer, a registry value will be set at
+
+Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\XXXXXXXXXXXX\osvc
+
+where XXX... is your VID+PID+BCD_VERSION (firmware version). 
+osvc will be set to 0x01XX where XX is VENDOR_CODE
+*/
+
+usb_os_string_descriptor_t usb_os_string_descriptor = {
+    .bLength = 0x12,
+    .bDescriptorType = 0x03,
+    .qwSignature = {0x4D, 0x00, 0x53, 0x00, 0x46, 0x00, 0x54, 0x00, 0x31, 0x00, 0x30, 0x00, 0x30, 0x00},  //'MSFT100'
+    #ifdef VENDOR_CODE
+    .bMS_VendorCode = VENDOR_CODE,
+    #else
+    .bMS_VendorCode = 0xA5,
+    #endif
+    .bPad = 0x00
+};
+
+// should not be used unless device supports high speed mode
+// would add the following to the usb_descriptor_list
+// {0x0600, 0x0000, usb_device_qualifier_desc, sizeof(usb_device_qualifier_desc)},
+/*
+usb_device_qualifier_descriptor_t usb_device_qualifier_descriptor = {
+    .bLength = 0x0A,
+    .bDescriptorType = 0x06,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = 0x00,
+    .bDeviceSubClass = 0x00,
+    .bDeviceProtocol = 0x00,
+    .bMaxPacketSize = 0x40,
+    .bNumConfigurations = 0x01,
+    .bReserved = 0x00
+};
+*/
+
+#ifndef NUM_COMPAT_IDS
+    #define NUM_COMPAT_IDS 0
+#endif
+
+/*
+If using IADs, use one function block for the IAD with .bFirstInterfaceNumber as the first interface in the IAD
+Every independent interface and IAD must have a function block. If no compat ID is desired for that interface/IAD then
+the .compatibleID can be left as null.
+
+Valid compatibleIDs are stored at
+Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\VID_XXXX&PID_XXXX&MI_00\YYYYYYYYYYYYYY\compatibleIDs
+where YYYYYYYYYYYY is the specific instance number. They can also be viewed via the device properties window.
+*/
+
+const usb_extended_compat_id_descriptor_t usb_extended_compat_id_descriptor = {
+    .dwLength = sizeof(usb_extended_compat_id_descriptor_t) + NUM_COMPAT_IDS * sizeof(usb_extended_compat_id_function_block_t),
+    .bcdVersion = OS_DESC_VERSION, // os desc v1.0
+    .wIndex = 0x0004,
+    .bCount = NUM_COMPAT_IDS,
+    .reserved = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    .function_blocks = {
+        // do #ifdef based upon usb type i.e. #ifdef USB_XINPUT
+        #if defined(XINPUT_INTERFACE)
+        {
+            .bFirstInterfaceNumber = 0x00,
+            .bRESERVED0 = 0x01,
+            //.compatibleID = {0x57, 0x49, 0x4E, 0x55, 0x53, 0x42, 0x00, 0x00}, // WINUSB\0\0
+            // more compatibleIDs can be found at https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-os-1-0-descriptors-specification
+            .compatibleID = {0x58, 0x55, 0x53, 0x42, 0x31, 0x30, 0x00, 0x00},
+            .subCompatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .bRESERVED1 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+        },
+        #if defined(USB_XINPUT_KEYBOARD_MOUSE)
+        {
+            .bFirstInterfaceNumber = 0x01,
+            .bRESERVED0 = 0x01,
+            .compatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .subCompatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .bRESERVED1 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+        },
+        {
+            .bFirstInterfaceNumber = 0x02,
+            .bRESERVED0 = 0x01,
+            .compatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .subCompatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .bRESERVED1 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+        },
+        #elif defined(USB_XINPUT_SERIAL) || defined(USB_XINPUT_DIRECTINPUT) // or any 2 interface xinput usb type
+        {
+            .bFirstInterfaceNumber = 0x01,
+            .bRESERVED0 = 0x01,
+            .compatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .subCompatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            .bRESERVED1 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+        },
+        #endif // USB_XINPUT_KEYBOARD_MOUSE
+        #endif // XINPUT_INTERFACE
+    }
+};
+#endif // OS_DESC_VERSION
 
 // **************************************************************
 //   String Descriptors
@@ -1731,6 +1788,7 @@ struct usb_string_descriptor_struct usb_string_serial_number_default = {
         3,
         {0,0,0,0,0,0,0,0,0,0}
 };
+#ifdef XINPUT_INTERFACE
 struct usb_string_descriptor_struct usb_string_xinput_security_descriptor = {
         2 + 88 * 2,
         3,
@@ -1743,6 +1801,7 @@ struct usb_string_descriptor_struct usb_string_xinput_security_descriptor = {
             'e', 's', 'e', 'r', 'v', 'e', 'd', '.'
         }
 };
+#endif
 #ifdef MTP_INTERFACE
 struct usb_string_descriptor_struct usb_string_mtp = {
 	2 + 3 * 2,
@@ -1838,7 +1897,11 @@ const usb_descriptor_list_t usb_descriptor_list[] = {
 #ifdef XINPUT_INTERFACE
 	{0x0304, 0x0409, (const uint8_t *)&usb_string_xinput_security_descriptor, 0},
 #endif
+#ifdef OS_DESC_VERSION
+    {0x3EE, 0x0000, (const uint8_t *)&usb_os_string_descriptor, 0},
+#endif
 	{0, 0, NULL, 0}
+    }
 };
 
 
