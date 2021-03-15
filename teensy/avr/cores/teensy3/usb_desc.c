@@ -34,7 +34,7 @@
 #include "usb_desc.h"
 #ifdef NUM_ENDPOINTS
 #ifdef OS_DESC_VERSION
-#include "usb_os_desc.h" // XInput
+#include "usb_os_desc.h" // XInput - Comment from TuFFrabit - This file seems to be missing from the repo. It is causing compilation errors.
 #endif
 #include "usb_names.h"
 #include "kinetis.h"
