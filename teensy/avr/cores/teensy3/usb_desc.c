@@ -33,12 +33,12 @@
 #define USB_DESC_LIST_DEFINE
 #include "usb_desc.h"
 #ifdef NUM_ENDPOINTS
-#ifdef OS_DESC_VERSION
-#include "usb_os_desc.h" // XInput
-#endif
+
 #include "usb_names.h"
 #include "kinetis.h"
 #include "avr_functions.h"
+
+
 
 // USB Descriptors are binary data which the USB host reads to
 // automatically detect a USB device's capabilities.  The format
@@ -63,8 +63,8 @@
 //   USB Device
 // **************************************************************
 
-#define LSB(n) ((n) & 255)
-#define MSB(n) (((n) >> 8) & 255)
+#define LSB(n) (((n) & 255))
+#define MSB(n) ((((n) >> 8) & 255))
 
 // USB Device Descriptor.  The USB host reads this first, to learn
 // what type of device is connected.
@@ -1634,7 +1634,7 @@ static uint8_t config_descriptor[CONFIG_DESC_SIZE] = {
 //   OS Feature Descriptors
 // **************************************************************
 
-#ifdef OS_DESC_VERSION 
+#ifdef OS_DESC_VERSION
 // not necessary since on usb versions <2.0 none of the descriptors
 // will be queried. But avoids theoretically possible collisions
 
@@ -1642,8 +1642,8 @@ static uint8_t config_descriptor[CONFIG_DESC_SIZE] = {
 // When debugging or modifying you will need to uninstall the device and delete the osvc
 // registry key.
 
-#define OS_DESC_REQANDTYPE OS_DESC_VERSION | 0xC0 // 0xA5C0
-#define OS_DESC_REQANDTYPE_IF OS_DESC_VERSION | 0xC1 // 0xA5C1
+//#define OS_DESC_REQANDTYPE OS_DESC_VERSION | 0xC0 // 0xA5C0
+//#define OS_DESC_REQANDTYPE_IF OS_DESC_VERSION | 0xC1 // 0xA5C1
 
 /*
 When correctly read by the computer, a registry value will be set at
@@ -1654,7 +1654,7 @@ where XXX... is your VID+PID+BCD_VERSION (firmware version).
 osvc will be set to 0x01XX where XX is VENDOR_CODE
 */
 
-usb_os_string_descriptor_t usb_os_string_descriptor = {
+usb_os_string_descriptor usb_os_string_desc = {
     .bLength = 0x12,
     .bDescriptorType = 0x03,
     .qwSignature = {0x4D, 0x00, 0x53, 0x00, 0x46, 0x00, 0x54, 0x00, 0x31, 0x00, 0x30, 0x00, 0x30, 0x00},  //'MSFT100'
@@ -1697,8 +1697,8 @@ Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\VID_XXXX&PID_XXXX&
 where YYYYYYYYYYYY is the specific instance number. They can also be viewed via the device properties window.
 */
 
-const usb_extended_compat_id_descriptor_t usb_extended_compat_id_descriptor = {
-    .dwLength = sizeof(usb_extended_compat_id_descriptor_t) + NUM_COMPAT_IDS * sizeof(usb_extended_compat_id_function_block_t),
+const usb_extended_compat_id_descriptor usb_extended_compat_id_desc = {
+    .dwLength = sizeof(usb_extended_compat_id_descriptor) + NUM_COMPAT_IDS * sizeof(usb_extended_compat_id_function_block),
     .bcdVersion = OS_DESC_VERSION, // os desc v1.0
     .wIndex = 0x0004,
     .bCount = NUM_COMPAT_IDS,
@@ -1715,7 +1715,7 @@ const usb_extended_compat_id_descriptor_t usb_extended_compat_id_descriptor = {
             .subCompatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
             .bRESERVED1 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
         },
-        #if defined(USB_XINPUT_KEYBOARD_MOUSE)
+        #if defined(USB_XINPUT_KEYBOARD_MOUSE) // could probably change these based off NUM_INTERFACE > ##
         {
             .bFirstInterfaceNumber = 0x01,
             .bRESERVED0 = 0x01,
@@ -1730,7 +1730,7 @@ const usb_extended_compat_id_descriptor_t usb_extended_compat_id_descriptor = {
             .subCompatibleID = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
             .bRESERVED1 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
         },
-        #elif defined(USB_XINPUT_SERIAL) || defined(USB_XINPUT_DIRECTINPUT) // or any 2 interface xinput usb type
+        #elif defined(USB_XINPUT_SEREMU) || defined(USB_XINPUT_DIRECTINPUT) // or any 2 interface xinput usb type
         {
             .bFirstInterfaceNumber = 0x01,
             .bRESERVED0 = 0x01,
@@ -1898,10 +1898,10 @@ const usb_descriptor_list_t usb_descriptor_list[] = {
 	{0x0304, 0x0409, (const uint8_t *)&usb_string_xinput_security_descriptor, 0},
 #endif
 #ifdef OS_DESC_VERSION
-    {0x3EE, 0x0000, (const uint8_t *)&usb_os_string_descriptor, 0},
+    {0x3EE, 0x0000, (const uint8_t *)&usb_os_string_desc, 0},
 #endif
 	{0, 0, NULL, 0}
-    }
+    
 };
 
 

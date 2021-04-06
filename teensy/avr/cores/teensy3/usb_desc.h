@@ -39,6 +39,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#if defined(USB_XINPUT_KEYBOARD_MOUSE) | defined(USB_XINPUT_SEREMU) | defined(USB_XINPUT_DIRECTINPUT)
+#include "usb_os_desc.h"
+#endif
+
 #define ENDPOINT_UNUSED			0x00
 #define ENDPOINT_TRANSMIT_ONLY		0x15
 #define ENDPOINT_RECEIVE_ONLY		0x19
@@ -1030,18 +1034,18 @@ Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\VID+PID+BC
   #define XINPUT_TX_SIZE        20
   #define ENDPOINT1_CONFIG ENDPOINT_TRANSMIT_ONLY
   #define ENDPOINT2_CONFIG ENDPOINT_RECEIVE_ONLY
-#endif // USB_XINPUT
+// USB_XINPUT
 
 #elif defined(USB_XINPUT_KEYBOARD_MOUSE)
-  #define BCD_USB 0x0200
+  #define BCD_USB 0x0200 // usb version. technically not supported by teensyduino but works
   #define OS_DESC_VERSION 0x0100
   #define DEVICE_CLASS 0x00
   #define DEVICE_SUBCLASS 0x00
   #define DEVICE_PROTOCOL 0x00
   #define DEVICE_ATTRIBUTES 0xA0
-  #define VENDOR_ID
-  #define PRODUCT_ID
-  #define VENDOR_CODE           0xA5
+  #define VENDOR_ID 0x045e
+  #define PRODUCT_ID 0x0000
+  #define VENDOR_CODE           0xA5 // used for compat id. recommend not changing
   #define MANUFACTURER_NAME {'T','e','e','n','s','y','d','u','i','n','o'}
   #define MANUFACTURER_NAME_LEN 11
   #define PRODUCT_NAME {'X', 'I', 'n', 'p', 'u', 't', '+', 'K', 'B', 'M'}
@@ -1050,7 +1054,7 @@ Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\VID+PID+BC
   #define NUM_ENDPOINTS         4
   #define NUM_USB_BUFFERS       24
   #define NUM_INTERFACE         3
-  #define NUM_COMPAT_IDS        3
+  #define NUM_COMPAT_IDS        3 // = num interfaces
   #define XINPUT_INTERFACE      0
   #define XINPUT_RX_ENDPOINT    2
   #define XINPUT_RX_SIZE        8
@@ -1068,17 +1072,85 @@ Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\VID+PID+BC
   #define ENDPOINT2_CONFIG ENDPOINT_RECEIVE_ONLY
   #define ENDPOINT3_CONFIG ENDPOINT_TRANSMIT_ONLY
   #define ENDPOINT4_CONFIG ENDPOINT_TRANSMIT_ONLY
-#endif // USB_XINPUT_KEYBOARD_MOUSE
 
-#elif defined(USB_XINPUT_SERIAL)
+// doesn't work. I think because teensy_gateway expects seremu to use endpoint 1
+// may also need to have a teensy vendor_id (0x16C0)
+#elif defined(USB_XINPUT_SEREMU)
+  #define BCD_USB 0x0200 // usb version. technically not supported by teensyduino but works
+  #define OS_DESC_VERSION 0x0100
+  #define DEVICE_CLASS 0x00
+  #define DEVICE_SUBCLASS 0x00
+  #define DEVICE_PROTOCOL 0x00
+  #define DEVICE_ATTRIBUTES 0xA0
+  #define VENDOR_ID 0x045e
+  #define PRODUCT_ID 0x0000
+  #define VENDOR_CODE           0xA5 // used for compat id. recommend not changing
+  #define MANUFACTURER_NAME {'T','e','e','n','s','y','d','u','i','n','o'}
+  #define MANUFACTURER_NAME_LEN 11
+  #define PRODUCT_NAME {'X', 'I', 'n', 'p', 'u', 't', '+', 'K', 'B', 'M'}
+  #define PRODUCT_NAME_LEN 10
+  #define EP0_SIZE              64
+  #define NUM_ENDPOINTS         4
+  #define NUM_USB_BUFFERS       24
+  #define NUM_INTERFACE         3
+  #define NUM_COMPAT_IDS        2 // = num interfaces
+  #define XINPUT_INTERFACE      0
+  #define XINPUT_RX_ENDPOINT    2
+  #define XINPUT_RX_SIZE        8
+  #define XINPUT_TX_ENDPOINT    1
+  #define XINPUT_TX_SIZE        20
+  #define SEREMU_INTERFACE      1 // Serial emulation
+  #define SEREMU_TX_ENDPOINT    3
+  #define SEREMU_TX_SIZE        64
+  #define SEREMU_TX_INTERVAL    1
+  #define SEREMU_RX_ENDPOINT    4
+  #define SEREMU_RX_SIZE        32
+  #define SEREMU_RX_INTERVAL    2
+  #define ENDPOINT1_CONFIG ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT2_CONFIG ENDPOINT_RECEIVE_ONLY
+  #define ENDPOINT3_CONFIG ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT4_CONFIG ENDPOINT_RECEIVE_ONLY
 
-#endif // USB_XINPUT_SERIAL
+// USB_XINPUT_SEREMU
 
+// not tested. no idea if it works
 #elif defined(USB_XINPUT_DIRECTINPUT)
+  #define BCD_USB 0x0200 // usb version. technically not supported by teensyduino but works
+  #define OS_DESC_VERSION 0x0100
+  #define DEVICE_CLASS 0x00
+  #define DEVICE_SUBCLASS 0x00
+  #define DEVICE_PROTOCOL 0x00
+  #define DEVICE_ATTRIBUTES 0xA0
+  #define VENDOR_ID 0x045e
+  #define PRODUCT_ID 0x0000
+  #define VENDOR_CODE           0xA5 // used for compat id. recommend not changing
+  #define MANUFACTURER_NAME {'T','e','e','n','s','y','d','u','i','n','o'}
+  #define MANUFACTURER_NAME_LEN 11
+  #define PRODUCT_NAME {'X', 'I', 'n', 'p', 'u', 't', '+', 'K', 'B', 'M'}
+  #define PRODUCT_NAME_LEN 10
+  #define EP0_SIZE              64
+  #define NUM_ENDPOINTS         3
+  #define NUM_USB_BUFFERS       24
+  #define NUM_INTERFACE         2
+  #define NUM_COMPAT_IDS        2 // = num interfaces
+  #define XINPUT_INTERFACE      0
+  #define XINPUT_RX_ENDPOINT    2
+  #define XINPUT_RX_SIZE        8
+  #define XINPUT_TX_ENDPOINT    1
+  #define XINPUT_TX_SIZE        20
+  #define JOYSTICK_INTERFACE    1 // Joystick
+  #define JOYSTICK_ENDPOINT     6
+  #define JOYSTICK_SIZE         12  //  12 = normal, 64 = extreme joystick
+  #define JOYSTICK_INTERVAL     1
+  #define ENDPOINT1_CONFIG ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT2_CONFIG ENDPOINT_RECEIVE_ONLY
+  #define ENDPOINT6_CONFIG ENDPOINT_TRANSMIT_ONLY
+// USB_XINPUT_DIRECTINPUT
+#endif
 
-#endif // USB_XINPUT_DIRECTINPUT
-  
-
+#ifdef OS_DESC_VERSION
+  #define OS_DESC_REQANDTYPE (((((VENDOR_CODE) << 8) & 0xFF00) | 0xC0)) // 0xA5C0
+  #define OS_DESC_REQANDTYPE_IF (((((VENDOR_CODE) << 8) & 0xFF00) | 0xC1)) // 0xA5C1
 #endif
 
 #ifdef USB_DESC_LIST_DEFINE

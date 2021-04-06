@@ -500,10 +500,10 @@ static void usb_setup(void)
 #if defined(OS_DESC_VERSION) && (OS_DESC_VERSION == 0x0100)
 	  case OS_DESC_REQANDTYPE: // 0xA5C0
 	  	if (setup.wIndex == 0x0004) { // compatible id
-	  		data = (const uint8_t *)&usb_extended_compat_id_descriptor;
+	  		data = (const uint8_t *)&usb_extended_compat_id_desc;
 	  		datalen = setup.wLength;
-	  		if (setup.wLength > usb_extended_compat_id_descriptor.dwLength) {
-	  			datalen = usb_extended_compat_id_descriptor.dwLength;
+	  		if (setup.wLength > usb_extended_compat_id_desc.dwLength) {
+	  			datalen = usb_extended_compat_id_desc.dwLength;
 	  		}
 	  		break;
 	  	}

@@ -84,12 +84,27 @@ uint8_t usb_joystick_class::manual_mode = 0;
 usb_serial_class Serial;
 #endif
 
-#ifdef USB_XINPUT
+// Should also probably remove the XInput class declaration at the bottom of XInput.cpp
+// and declare it here instead.
+// 
+// This is needed because dave maddison's XInput library has a debug mode
+// which originall printed to Serial if the usb type was not USB_XINPUT
+// Now it prints to Serial only if there is no XINPUT_INTERFACE defined
+// So any usb device using XInput must have some kind of Serial class instance
+// even if it is not listed as an interface and has no endpoints.
+//
+// Using usb_serial_class as he does is also technically incorrect since
+// in boards.txt he specifies fake_serial=teensy_gateway which implies the
+// use of serial emulation and the usb_seremu_class
+//
+// This could probably be handled in a more versatile way by modifying
+// XInput.cpp
+#if defined(USB_XINPUT) | defined(USB_XINPUT_KEYBOARD_MOUSE) 
 usb_serial_class Serial;
 #endif
 
-#ifdef USB_XINPUT_KEYBOARD_MOUSE
-usb_serial_class Serial;
+#ifdef USB_XINPUT_SEREMU
+usb_seremu_class Serial;
 #endif
 
 // TODO: other usb types for XInput
